@@ -1,0 +1,71 @@
+<?php
+
+$manifestHeader = '<?xml version="1.0" encoding="UTF-8"?>
+<manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.2">
+ <manifest:file-entry manifest:full-path="/" manifest:version="1.2" manifest:media-type="application/vnd.oasis.opendocument.presentation"/>
+ <manifest:file-entry manifest:full-path="meta.xml" manifest:media-type="text/xml"/>';
+$manifestFooter = '<manifest:file-entry manifest:full-path="settings.xml" manifest:media-type="text/xml"/>
+ <manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/>
+ <manifest:file-entry manifest:full-path="Thumbnails/thumbnail.png" manifest:media-type="image/png"/>
+ <manifest:file-entry manifest:full-path="Configurations2/accelerator/current.xml" manifest:media-type=""/>
+ <manifest:file-entry manifest:full-path="Configurations2/" manifest:media-type="application/vnd.sun.xml.ui.configuration"/>
+ <manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/>
+</manifest:manifest>';
+
+
+if ($handle = opendir($argv[1])) {
+	echo "copying jpeg picture form $argv[1] to template/Pictures :\n";
+
+	$picNum = 0;
+	while (false !== ($entry = readdir($handle))) {
+		if (!is_dir($entry) && preg_match ("/\.(jpeg|jpg)$/i", $entry))
+		{
+			$picNum++;    
+			$destination = "template/Pictures/".$picNum.".jpg";
+			echo $destination . "\n";
+			copy($argv[1]."/".$entry, $destination);
+		}
+	}
+
+	closedir($handle);
+
+	$header = "header.txt";
+	$footer = "footer.txt";
+	$pictureTemplate = "picture.txt";
+	$templateContent = "template/content.xml";
+	$templateManifest = "template/META-INF/manifest.xml";
+
+	if (file_exists($header) && file_exists($footer) && file_exists($pictureTemplate))
+	{
+		$headerLines = file_get_contents($header);
+		$footerLines = file_get_contents($footer);
+		$pictureContent = file_get_contents($pictureTemplate);
+		$pictures = array();
+		$patterns = array();
+		$replacements = array();
+		$manifest = array();
+
+		for($i = 1; $i <= $picNum; $i++){
+			// one picture per page
+			$patterns[0] = "/%PAGENUM%/";
+			$patterns[1] = "/%PICTURENAME%/";
+			$replacements[0] = "$i";
+			$replacements[1] = "$i.jpg";
+		 	$manifest[] = '<manifest:file-entry manifest:full-path="Pictures/' . $i . '.jpg" manifest:media-type=""/>' . "\n";
+
+			$pictures[] = preg_replace($patterns,$replacements, $pictureContent);
+
+		}
+
+		// generate content.xml
+		file_put_contents($templateContent, $headerLines, FILE_APPEND);
+		file_put_contents($templateContent, $pictures, FILE_APPEND);	
+		file_put_contents($templateContent, $footerLines ,FILE_APPEND);
+
+		// generate manifest.xml
+		file_put_contents($templateManifest, $manifestHeader, FILE_APPEND);
+		file_put_contents($templateManifest, $manifest, FILE_APPEND);
+		file_put_contents($templateManifest, $manifestFooter, FILE_APPEND);
+
+	}
+}

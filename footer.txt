@@ -1,0 +1,4 @@
+			<presentation:settings presentation:mouse-visible="false"/>
+		</office:presentation>
+	</office:body>
+</office:document-content>
